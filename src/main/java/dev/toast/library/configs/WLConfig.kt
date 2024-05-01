@@ -9,4 +9,12 @@ enum class ConfigType {
     ;
 }
 
-interface WLConfig : Serializable
+interface WLConfig : Serializable {
+
+    fun getExtension(): String
+    fun getName(): String
+    fun getFullFileName(): String
+    fun setName(string: String)
+    fun getPathIncludingExtension(): String
+
+}

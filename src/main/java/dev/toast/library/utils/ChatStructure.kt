@@ -1,11 +1,15 @@
 package dev.toast.library.utils
 
+import net.kyori.adventure.audience.Audience
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.event.ClickEvent
 import net.kyori.adventure.text.event.HoverEvent
 import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.text.format.TextDecoration
 import net.kyori.adventure.text.minimessage.MiniMessage
+import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver
+import net.kyori.adventure.text.minimessage.tag.standard.StandardTags
+import org.bukkit.entity.Player
 
 @Suppress("UNUSED")
 enum class ChatStructure(val colorTag: String) {
@@ -52,6 +56,11 @@ enum class ChatStructure(val colorTag: String) {
                 .hoverEvent(HoverEvent.showText(Component.text("Click to open $url")))
         }
 
+        fun createHoverableComponent(text: String, hoverText: String): Component {
+            val hoverEvent = HoverEvent.showText(Component.text(hoverText))
+            return Component.text(text).hoverEvent(hoverEvent)
+        }
+
         /**
          * Creates a clickable chat component that suggests a command when clicked.
          *
@@ -60,12 +69,20 @@ enum class ChatStructure(val colorTag: String) {
          * @return The clickable component.
          */
         fun clickableCommand(text: String, command: String): Component {
-            return Component.text(text)
-                .color(NamedTextColor.GREEN)
-                .clickEvent(ClickEvent.suggestCommand(command))
-                .hoverEvent(HoverEvent.showText(Component.text("Click to suggest command")))
+            val miniMessage = MiniMessage.builder()
+                .tags(
+                    TagResolver.builder()
+                    .resolver(StandardTags.color())
+                    .resolver(StandardTags.decorations())
+                    .resolver(StandardTags.hoverEvent())
+                    .resolver(StandardTags.clickEvent())
+                    .build())
+                .build()
 
+
+            return miniMessage.deserialize("<hover:show_text:'$text'><click:suggest_command:'$command'> <gold>[USAGE]</gold>")
         }
+
 
         fun createPaginatedMessage(items: List<Component>, itemsPerPage: Int): PaginatedMessage {
             return PaginatedMessage(items, itemsPerPage)
@@ -86,9 +103,19 @@ enum class ChatStructure(val colorTag: String) {
         }
 
         fun gradiantColor(message: String, colors: Array<ChatStructure>): Component {
-            val gradiant = colors.joinToString(separator = ":", transform = { it.colorTag })
-            return MiniMessage.miniMessage().deserialize("<$gradiant$message<reset>")
+            var gradiant = ""
+            colors.forEachIndexed { index, color ->
+                val colorTag = color.colorTag.removeSurrounding("<", ">")
+                gradiant += colorTag
+                if (index < colors.size - 1) {
+                    gradiant += ":"
+                }
+            }
+            println(gradiant)
+            return MiniMessage.miniMessage().deserialize("<gradient:$gradiant>$message<reset>")
         }
+
+
 
         fun format(component: Component): Component {
             val miniMessage = MiniMessage.miniMessage()
@@ -96,12 +123,34 @@ enum class ChatStructure(val colorTag: String) {
             return miniMessage.deserialize("$componentString<reset>")
         }
 
+        fun formatString(text: String): Component {
+            return MiniMessage.miniMessage().deserialize(text)
+        }
+
+        fun sendMessage(player: Player, message: Component) {
+            val audience = Audience.audience(player)
+            audience.sendMessage(message)
+        }
+
+        fun sendMessage(player: Player, message: String) {
+            val audience = Audience.audience(player)
+            audience.sendMessage(MiniMessage.miniMessage().deserialize(message))
+        }
+
     }
 
-    // create an operator fun +
     operator fun plus(other: String): Component {
         return MiniMessage.miniMessage().deserialize("$colorTag$other")
     }
+
+
+    fun format(text: String): Component {
+        return MiniMessage.miniMessage().deserialize(
+            "${colorTag}$text<reset>",
+            StandardTags.color(), StandardTags.clickEvent(), StandardTags.hoverEvent(), StandardTags.decorations(),
+        )
+    }
+
 
 
 
@@ -115,7 +164,7 @@ enum class ChatStructure(val colorTag: String) {
             val startIdx = pageIdx * itemsPerPage
             val endIdx = minOf(startIdx + itemsPerPage, items.size)
 
-            val pageItems = Component.text("Page $page of $totalPages\n", NamedTextColor.YELLOW)
+            val pageItems = GOLD + "Page: $page /$totalPages\n\n      - This houses only commands associated with the wonderland library. \n\n"
             val components = items.subList(startIdx, endIdx).fold(pageItems) { comp, item ->
                 comp.append(item).append(Component.newline())
             }
@@ -144,4 +193,10 @@ enum class ChatStructure(val colorTag: String) {
         }
     }
 
+}
+
+fun finalizeComponent(component: Component): Component {
+    val miniMessage = MiniMessage.miniMessage()
+    val serialized = miniMessage.serialize(component)
+    return miniMessage.deserialize("$serialized<reset>")
 }

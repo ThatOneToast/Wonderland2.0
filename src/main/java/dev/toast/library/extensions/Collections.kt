@@ -1,11 +1,29 @@
 package dev.toast.library.extensions
 
+import net.kyori.adventure.text.Component
+import net.kyori.adventure.text.minimessage.MiniMessage
+import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver
+import net.kyori.adventure.text.minimessage.tag.standard.StandardTags
 import java.io.ByteArrayOutputStream
 import java.io.ObjectOutputStream
 import java.io.Serializable
 import java.nio.ByteBuffer
 import java.security.MessageDigest
 import java.util.*
+
+fun String.toMiniMessageComponent(): Component {
+    try {
+        val tags = TagResolver.builder()
+            .resolver(StandardTags.color())
+            .resolver(StandardTags.decorations())
+            .resolver(StandardTags.hoverEvent())
+            .resolver(StandardTags.clickEvent())
+
+        return MiniMessage.miniMessage().deserialize(this, tags.build() )
+    } catch (e: Exception) {
+        throw IllegalArgumentException("Failed to parse MiniMessage: $this", e)
+    }
+}
 
 
 fun <T : Serializable> Set<T>.toBytes(): ByteArray {
@@ -23,6 +41,7 @@ fun <K : Serializable, V : Serializable> Map<K, V>.toBytes(): ByteArray {
     }
     return baos.toByteArray()
 }
+
 
 
 fun combineUUIDs(uuid1: UUID, uuid2: UUID): UUID {

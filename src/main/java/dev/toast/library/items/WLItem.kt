@@ -20,7 +20,7 @@ interface WLItemEnchance
 
 @Suppress("unused")
 open class WLItem(
-    val name: String,
+    val name: Component,
     val material: Material,
     val customModelData: Int
 ) {
@@ -54,10 +54,8 @@ open class WLItem(
     open fun applyLore(): List<Component> {
         val lore: MutableList<Component> = mutableListOf()
 
-        val redBlueGreenGradiant = arrayOf(ChatStructure.RED, ChatStructure.BLUE, ChatStructure.GREEN)
-
-        lore.add(ChatStructure.GRADIENT_GREEN_TO_YELLOW + "Super Dank Weapon!")
-        lore.add(ChatStructure.gradiantColor("Now this is super dank!", redBlueGreenGradiant))
+        lore.add((ChatStructure.GRADIENT_GREEN_TO_YELLOW + "Super Dank Weapon!"))
+        lore.add(ChatStructure.gradiantColor("Now this is super dank!", arrayOf(ChatStructure.RED, ChatStructure.BLUE, ChatStructure.GREEN)))
 
         return lore
     }
@@ -73,7 +71,7 @@ open class WLItem(
         val item = ItemStack(material)
         val meta = item.itemMeta
 
-        meta.displayName()
+        meta.displayName(name)
         meta.setCustomModelData(customModelData)
 
         val enchants: Map<Enchantment, Int> = applyEnchants()

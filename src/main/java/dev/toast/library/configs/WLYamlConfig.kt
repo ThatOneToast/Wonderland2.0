@@ -14,17 +14,18 @@ import java.io.StringWriter
  * @property defaultProperties Default key-value pairs that initialize the configuration properties.
  */
 open class WLYamlConfig(
-    val name: String,
+    private val cname: String,
     open val folder: String,
     open val quickAccess: Boolean,
     private val defaultProperties: Map<String, Any> = mapOf()
 ) : WLConfig {
     private var properties: MutableMap<String, Any> = defaultProperties.toMutableMap()
+    private var name = cname
 
     // Full path to the configuration file, combining the folder and file name.
     val fullPath = "${WonderlandLibrary.getPlugin().dataFolder.absolutePath}/Configs/$name.yml"
     // Full name of the YAML file.
-    val fullFileName = "$name.yml"
+    private val fullFileName = "$name.yml"
 
     init {
         // Initialize properties with default values.
@@ -67,6 +68,13 @@ open class WLYamlConfig(
     }
 
     /**
+     * Returns all properties
+     */
+    fun getProperties(): MutableMap<String, Any> {
+        return properties
+    }
+
+    /**
      * Resets the properties to their default values as specified at initialization.
      */
     fun resetToDefault() {
@@ -101,6 +109,8 @@ open class WLYamlConfig(
     private fun formatYamlValue(value: Any): Any {
         return when (value) {
             is Map<*, *> -> value.mapValues { (_, v) -> formatYamlValue(v!!) }
+            is Set<*> -> value.map { formatYamlValue(it!!) }.toSet()
+            is List<*> -> value.map { formatYamlValue(it!!) }
             is String -> "\"$value\""
             else -> value
         }
@@ -117,11 +127,31 @@ open class WLYamlConfig(
             val yaml = Yaml()
             val data: Map<String, Any> = yaml.load(StringReader(yamlString))
             return WLYamlConfig(
-                data["name"] as? String ?: throw IllegalArgumentException("Name is missing"),
+                data["name"] as? String ?: throw IllegalArgumentException("Folder is missing name"),
                 data["folder"] as? String ?: throw IllegalArgumentException("Folder is missing"),
                 data["quickAccess"] as? Boolean ?: throw IllegalArgumentException("QuickAccess is missing"),
                 data["properties"] as? Map<String, Any> ?: throw IllegalArgumentException("Properties are missing")
             )
         }
+    }
+
+    override fun getExtension(): String {
+        return ".yml"
+    }
+
+    final override fun getName(): String {
+        return cname
+    }
+
+    override fun getFullFileName(): String {
+        return fullFileName
+    }
+
+    override fun setName(string: String) {
+        name = string
+    }
+
+    override fun getPathIncludingExtension(): String {
+        return fullPath
     }
 }

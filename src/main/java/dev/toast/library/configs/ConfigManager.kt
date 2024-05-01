@@ -1,7 +1,6 @@
 package dev.toast.library.configs
 
 import dev.toast.library.WonderlandLibrary
-import dev.toast.library.extensions.toBytes
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.ObjectInputStream
@@ -14,28 +13,12 @@ import java.util.logging.Level
 class ConfigManager {
     private val dataPath = WonderlandLibrary.getPlugin().dataFolder.absolutePath
     private val memoryConfigsFile = File("$dataPath/MemoryConfigs.bit")
-    private val configsIndexFile = File("$dataPath/index.bit")
+    private val configsIndexFile = File("$dataPath/Index.bit")
 
     private var memoryConfigs: MutableSet<WLConfig> = mutableSetOf()
     private var indexedConfigs: MutableMap<String, String> = mutableMapOf()
 
-    init {
-        initializeConfigFiles()
-    }
 
-    /**
-     * Initializes configuration files and directories on disk if they do not already exist.
-     */
-    private fun initializeConfigFiles() {
-        if (!memoryConfigsFile.exists()) {
-            memoryConfigsFile.createNewFile()
-            memoryConfigsFile.writeBytes(memoryConfigs.toBytes())
-        }
-        if (!configsIndexFile.exists()) {
-            configsIndexFile.createNewFile()
-            configsIndexFile.writeBytes(indexedConfigs.toBytes())
-        }
-    }
 
     /**
      * Reloads a specific configuration by its name, updating the in-memory cache.
@@ -44,7 +27,7 @@ class ConfigManager {
      */
     fun reloadConfig(name: String) {
         val newConfig = getConfig(name, skipMemCheck = true) as? WLYamlConfig ?: return
-        memoryConfigs.removeIf { it is WLYamlConfig && it.name == name }
+        memoryConfigs.removeIf { it is WLYamlConfig && it.getName() == name }
         memoryConfigs.add(newConfig)
     }
 
@@ -55,24 +38,6 @@ class ConfigManager {
         memoryConfigs.clear()
         val memConfigs: MutableSet<WLConfig> = deserializeConfigs(memoryConfigsFile.readBytes())
         memoryConfigs.addAll(memConfigs)
-    }
-
-    /**
-     * Saves all configuration data to disk.
-     */
-    private fun saveInternals() {
-        val memConfig = WLBytesConfig(
-            "Cache",
-            WonderlandLibrary.getPlugin().dataFolder.absolutePath,
-            false
-        )
-        val indexConfig = WLBytesConfig(
-            "Index",
-            WonderlandLibrary.getPlugin().dataFolder.absolutePath,
-            true
-        )
-        memoryConfigsFile.writeBytes(memConfig.toBytes())
-        configsIndexFile.writeBytes(indexConfig.toBytes())
     }
 
     /**
@@ -87,39 +52,45 @@ class ConfigManager {
     fun getConfig(name: String, skipMemCheck: Boolean = false): WLConfig {
         if (!skipMemCheck) {
             memoryConfigs.firstOrNull { config ->
-                (config is WLYamlConfig || config is WLBytesConfig && config.name == name)
+                (config is WLYamlConfig || config is WLBytesConfig && config.getName() == name)
             }?.let { return it }
         }
 
-        for (indexedConfig in indexedConfigs) {
-            if (indexedConfig.key == name) {
-                val configFile = File(indexedConfig.value)
-                if (configFile.endsWith(".bit")) {
-                    return WLBytesConfig.fromBytes(configFile.readBytes())
-                }
-                else if (configFile.endsWith("yml")) {
-                    return WLYamlConfig.fromYaml(configFile.readText())
-                }
-            }
+        // Try to retrieve the configuration from indexed paths
+        indexedConfigs[name]?.let { path ->
+            val configFile = File(path)
+            return loadConfigFromFile(configFile)
         }
 
+        // Try to find and load the configuration file in the plugin's data folder
         val configFile: File = WonderlandLibrary.getPlugin().dataFolder.walk()
             .filter { it.isFile }
-            .find { it.name == name} ?: throw NullPointerException("$name doesn't exist.")
+            .find { it.nameWithoutExtension == name }
+            ?: throw ConfigurationNotFoundException("Configuration file '$name' does not exist.")
 
-        if (configFile.endsWith(".bit")) {
-            val config = WLBytesConfig.fromBytes(configFile.readBytes())
-            indexedConfigs[config.name] = config.fullPath
-            return config
-        }
-        else if (configFile.endsWith(".yml")) {
-            val config = WLYamlConfig.fromYaml(configFile.readText())
-            indexedConfigs[config.name] = config.fullPath
-            return config
-        }
-
-        throw NullPointerException("$name doesn't exist.")
+        return loadConfigFromFile(configFile)
     }
+
+    private fun loadConfigFromFile(configFile: File): WLConfig {
+        return when (configFile.extension) {
+            "bit" -> {
+                WLBytesConfig.fromBytes(configFile.readBytes()).also {
+                    indexedConfigs[it.getName()] = configFile.absolutePath
+                }
+            }
+            "yml" -> {
+                WLYamlConfig.fromYaml(configFile.readText()).also {
+                    indexedConfigs[it.getName()] = configFile.absolutePath
+                }
+            }
+            else -> {
+                throw ConfigurationNotFoundException("Unsupported configuration file format for '${configFile.name}'.")
+            }
+        }
+    }
+
+    class ConfigurationNotFoundException(message: String) : Exception(message)
+
 
     /**
      * Checks if a configuration file exists on disk.
@@ -153,7 +124,7 @@ class ConfigManager {
                     if (config.quickAccess) {
                         memoryConfigs.add(config)
                     }
-                    indexedConfigs[config.name] = config.fullPath
+                    indexedConfigs[config.getName()] = config.fullPath
                 } else {
                     throw IllegalArgumentException("This config already exists")
                 }
@@ -168,7 +139,7 @@ class ConfigManager {
                     if (config.quickAccess) {
                         memoryConfigs.add(config)
                     }
-                    indexedConfigs[config.name] = config.fullPath
+                    indexedConfigs[config.getName()] = config.fullPath
                 } else {
                     throw IllegalArgumentException("This config already exists")
                 }
@@ -188,19 +159,86 @@ class ConfigManager {
         saveInternals()
     }
 
+    init {
+        initializeConfigFiles()
+    }
+
+    /**
+     * Initializes configuration files and directories on disk if they do not already exist.
+     */
+    private fun initializeConfigFiles() {
+        if (!memoryConfigsFile.exists()) {
+            memoryConfigsFile.createNewFile()
+            saveInternals()
+
+        }
+        if (!configsIndexFile.exists()) {
+            configsIndexFile.createNewFile()
+            saveInternals()
+        }
+    }
+
+    /**
+     * Saves all configuration data to disk.
+     */
+    private fun saveInternals() {
+        val memConfig = WLBytesConfig(
+            "MemoryConfigs",
+            WonderlandLibrary.getPlugin().dataFolder.absolutePath,
+            false,
+            mapOf(Pair("Configs", memoryConfigs))
+        )
+        val indexConfig = WLBytesConfig(
+            "Index",
+            WonderlandLibrary.getPlugin().dataFolder.absolutePath,
+            true,
+            mapOf(Pair("Configs", indexedConfigs))
+        )
+        memoryConfigsFile.writeBytes(memConfig.toBytes())
+        configsIndexFile.writeBytes(indexConfig.toBytes())
+    }
+
     /**
      * Initializes the configuration manager by loading configurations from disk into memory.
      */
     fun start() {
-        val configSet: MutableSet<WLConfig> = deserializeConfigs(memoryConfigsFile.readBytes())
-        val configsMap: MutableMap<String, String> = deserializeConfigs(configsIndexFile.readBytes())
+        try {
+            val configSetBytes = memoryConfigsFile.readBytes()
+            val configSet: WLBytesConfig = WLBytesConfig.fromBytes(configSetBytes)
+            val configsMapBytes = configsIndexFile.readBytes()
+            val configsMap: WLBytesConfig = WLBytesConfig.fromBytes(configsMapBytes)
 
-        memoryConfigs = configSet
-        indexedConfigs = configsMap
+            val memoryConfigsRaw = configSet.getProperty("configs")
+            memoryConfigs = memoryConfigsRaw as? MutableSet<WLConfig> ?: mutableSetOf()
 
+            val indexedConfigsPre: MutableList<String> = configsMap.getProperty("configs") as? MutableList<String> ?: mutableListOf()
+            val indexMap: MutableMap<String, String> = mutableMapOf()
+            for (str: String in indexedConfigsPre) {
+                val split = str.split(":")
+                indexMap[split[0]] = split[1]
+            }
+
+            indexedConfigs = indexMap
+
+        } catch (e: Exception) {
+            // Log the error, handle the exception, or rethrow it as necessary
+            println("Error initializing configurations: ${e.message}")
+        }
     }
 
+
     companion object {
+        private val allDataFolderFileNames: List<String> = WonderlandLibrary.getPlugin().dataFolder.walk()
+            .filter { it.isFile }
+            .map { it.name }
+            .toList()
+
+        /**
+         * Returns a list of file names
+         */
+        fun getAllConfigNames(): List<String> = allDataFolderFileNames
+
+
         /**
          * Generic method to deserialize configuration data from bytes into the specified type.
          *

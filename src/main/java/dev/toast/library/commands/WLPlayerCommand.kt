@@ -34,7 +34,7 @@ abstract class WLPlayerCommand(
                     sender as Player
                     val uuid = combineUUIDs(commandUUID, sender.uniqueId)
 
-                    if (args.isNotEmpty() && subcommands.containsKey(args[0].toLowerCase())) {
+                    if (args.isNotEmpty() && subcommands.containsKey(args[0].lowercase(Locale.getDefault()))) {
 
                         CooldownManager.applyCooldown(uuid, cooldown)
                         return subcommands[args[0].lowercase(Locale.getDefault())]!!.invoke(sender, args.copyOfRange(1, args.size))

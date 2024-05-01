@@ -14,18 +14,19 @@ import java.io.ObjectOutputStream
  * @property quickAccess Boolean indicating whether this configuration should be kept readily accessible in memory.
  * @property defaultProperties Default set of properties to initialize the configuration with.
  */
-open class WLBytesConfig(
-    val name: String,
+class WLBytesConfig(
+    private val cname: String,
     open val folder: String,
     open val quickAccess: Boolean,
     private val defaultProperties: Map<String, Any> = mapOf()
 ) : WLConfig {
     private var properties: MutableMap<String, Any> = defaultProperties.toMutableMap()
+    private var name = cname
 
     // Path where the binary configuration file is stored.
     val fullPath = "${WonderlandLibrary.getPlugin().dataFolder.absolutePath}/Configs/$name.bit"
     // Filename of the binary configuration file.
-    val fullFileName = "$name.bit"
+    private val fullFileName = "$name.bit"
 
     init {
         // Initialize properties from the default map.
@@ -76,6 +77,13 @@ open class WLBytesConfig(
     }
 
     /**
+     * Returns all properties
+     */
+    fun getProperties(): MutableMap<String, Any> {
+        return properties
+    }
+
+    /**
      * Serializes the current configuration state to a byte array.
      *
      * @return A byte array representing the serialized state of the configuration.
@@ -101,4 +109,26 @@ open class WLBytesConfig(
             return ConfigManager.deserializeConfigs(byteArray)
         }
     }
+
+    override fun getExtension(): String {
+        return ".bit"
+    }
+
+    override fun getName(): String {
+        return name
+    }
+
+    override fun setName(string: String) {
+        name = string
+    }
+
+    override fun getFullFileName(): String {
+        return fullFileName
+    }
+
+    override fun getPathIncludingExtension(): String {
+        return fullPath
+    }
+
+
 }
