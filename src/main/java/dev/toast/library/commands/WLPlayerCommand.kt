@@ -1,9 +1,10 @@
 package dev.toast.library.commands
 
 import dev.toast.library.WonderlandLibrary
+import dev.toast.library.extensions.combineUUIDs
+import dev.toast.library.utils.ChatStructure
 import dev.toast.library.utils.CooldownManager
 import org.bukkit.Bukkit
-import org.bukkit.ChatColor
 import org.bukkit.command.Command
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
@@ -31,13 +32,15 @@ abstract class WLPlayerCommand(
             override fun execute(sender: CommandSender, commandLabel: String, args: Array<String>): Boolean {
                 if(canExecute(sender, args)) {
                     sender as Player
+                    val uuid = combineUUIDs(commandUUID, sender.uniqueId)
 
                     if (args.isNotEmpty() && subcommands.containsKey(args[0].toLowerCase())) {
-                        CooldownManager.applyCooldown(UUID.fromString("${commandUUID}${sender.uniqueId}"), cooldown)
+
+                        CooldownManager.applyCooldown(uuid, cooldown)
                         return subcommands[args[0].lowercase(Locale.getDefault())]!!.invoke(sender, args.copyOfRange(1, args.size))
                     }
 
-                    CooldownManager.applyCooldown(UUID.fromString("${commandUUID}${sender.uniqueId}"), cooldown)
+                    CooldownManager.applyCooldown(uuid, cooldown)
                     return executeCommand(sender, args)
                 }
                 return false
@@ -59,10 +62,10 @@ abstract class WLPlayerCommand(
             sender.sendMessage("You do not have permission to use this command.")
             return false
         }
-        val uuid = UUID.fromString("${commandUUID}${sender.uniqueId}")
+        val uuid = combineUUIDs(commandUUID, sender.uniqueId)
 
         if(CooldownManager.isOnCooldown(uuid)) {
-            sender.sendMessage("" + ChatColor.RED + "You are on cooldown ${CooldownManager.getCooldownTimeInSec(uuid)}")
+            sender.sendMessage(ChatStructure.RED + "You are on cooldown ${CooldownManager.getCooldownTimeInSec(uuid)}")
             return false
         }
 

@@ -61,8 +61,18 @@ class ConfigManager {
      * Saves all configuration data to disk.
      */
     private fun saveInternals() {
-        memoryConfigsFile.writeBytes(memoryConfigs.toBytes())
-        configsIndexFile.writeBytes(indexedConfigs.toBytes())
+        val memConfig = WLBytesConfig(
+            "Cache",
+            WonderlandLibrary.getPlugin().dataFolder.absolutePath,
+            false
+        )
+        val indexConfig = WLBytesConfig(
+            "Index",
+            WonderlandLibrary.getPlugin().dataFolder.absolutePath,
+            true
+        )
+        memoryConfigsFile.writeBytes(memConfig.toBytes())
+        configsIndexFile.writeBytes(indexConfig.toBytes())
     }
 
     /**
@@ -72,6 +82,7 @@ class ConfigManager {
      * @param skipMemCheck If true, skips memory check and loads directly from disk.
      * @return The requested configuration object.
      * @throws IllegalStateException if the configuration cannot be found or loaded.
+     * @throws NullPointerException if there is no config that exists.
      */
     fun getConfig(name: String, skipMemCheck: Boolean = false): WLConfig {
         if (!skipMemCheck) {
@@ -80,18 +91,34 @@ class ConfigManager {
             }?.let { return it }
         }
 
-        return indexedConfigs[name]?.let { path ->
-            val configFile = File(path)
-            if (configFile.exists()) {
-                return when (configFile.extension) {
-                    "yml" -> WLYamlConfig.fromYaml(configFile.readText())
-                    "bit" -> WLBytesConfig.fromBytes(configFile.readBytes())
-                    else -> throw IllegalStateException("Unsupported file type for config: ${configFile.extension}")
+        for (indexedConfig in indexedConfigs) {
+            if (indexedConfig.key == name) {
+                val configFile = File(indexedConfig.value)
+                if (configFile.endsWith(".bit")) {
+                    return WLBytesConfig.fromBytes(configFile.readBytes())
                 }
-            } else {
-                throw IllegalStateException("The config file was not found at path: $path")
+                else if (configFile.endsWith("yml")) {
+                    return WLYamlConfig.fromYaml(configFile.readText())
+                }
             }
-        } ?: throw IllegalStateException("The config '$name' is not indexed and was not found in memory.")
+        }
+
+        val configFile: File = WonderlandLibrary.getPlugin().dataFolder.walk()
+            .filter { it.isFile }
+            .find { it.name == name} ?: throw NullPointerException("$name doesn't exist.")
+
+        if (configFile.endsWith(".bit")) {
+            val config = WLBytesConfig.fromBytes(configFile.readBytes())
+            indexedConfigs[config.name] = config.fullPath
+            return config
+        }
+        else if (configFile.endsWith(".yml")) {
+            val config = WLYamlConfig.fromYaml(configFile.readText())
+            indexedConfigs[config.name] = config.fullPath
+            return config
+        }
+
+        throw NullPointerException("$name doesn't exist.")
     }
 
     /**
@@ -170,6 +197,7 @@ class ConfigManager {
 
         memoryConfigs = configSet
         indexedConfigs = configsMap
+
     }
 
     companion object {

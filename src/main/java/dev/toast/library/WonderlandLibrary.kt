@@ -1,6 +1,7 @@
 package dev.toast.library
 
 import dev.toast.library.configs.ConfigManager
+import dev.toast.library.extensions.HandleCustomEvents
 import dev.toast.library.utils.CooldownManager
 import org.bukkit.plugin.Plugin
 import java.io.File
@@ -29,6 +30,9 @@ class WonderlandLibrary {
         File(plugin.dataFolder, "Configs").mkdirs()
         // Initialize the configuration manager.
         configManager = ConfigManager()
+
+        plugin.server.pluginManager.registerEvents(HandleCustomEvents(), plugin)
+
     }
 
     /**
