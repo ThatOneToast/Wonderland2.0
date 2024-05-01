@@ -1,0 +1,59 @@
+# Maven specific
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+
+# Gradle specific
+.gradle/
+build/
+out/
+
+# IntelliJ IDEA specific
+.idea/
+*.iws
+*.iml
+*.ipr
+*.class
+
+# Eclipse specific
+.classpath
+.project
+.settings/
+*.sublime-workspace
+
+# VS Code specific
+.vscode/
+
+# Operating system specific
+.DS_Store
+Thumbs.db
+
+# Node modules if you use Node in some tooling
+node_modules/
+
+# Logs and databases
+*.log
+*.sql
+*.sqlite
+
+# Folder specific exclusions
+plugin/
+resources/
+
+# Jar files, you might want to keep jars if they are part of the repo's deliverables
+*.jar
+
+# Other files to ignore
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+hs_err_pid*
