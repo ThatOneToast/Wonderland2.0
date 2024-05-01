@@ -1,0 +1,6 @@
+jdk:
+  - openjdk11
+
+before_install:
+  - "sed -i 's/kotlin(\"jvm\") version \"1.9.23\"/kotlin(\"jvm\") version \"1.5.31\"/' build.gradle.kts"
+
