@@ -2,6 +2,7 @@ plugins {
     id("java")
     id("org.jetbrains.kotlin.jvm") version "1.9.23"
     id("com.github.johnrengelman.shadow") version "8.1.1"
+    id("io.papermc.paperweight.userdev") version "1.7.0" // https://plugins.gradle.org/plugin/io.papermc.paperweight.userdev
 }
 
 group = "dev.toast"
@@ -9,22 +10,24 @@ version = "1.0.1"
 
 repositories {
     mavenCentral()
+    gradlePluginPortal()
     maven("https://repo.papermc.io/repository/maven-public/") {
         name = "papermc-repo"
     }
+
     maven("https://oss.sonatype.org/content/groups/public/") {
         name = "sonatype"
     }
-    gradlePluginPortal()
 }
 
 dependencies {
-    compileOnly("io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT")
+    // compileOnly("io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT")
     implementation(kotlin("stdlib-jdk8"))
     implementation(kotlin("reflect"))
+    paperweight.paperDevBundle("1.20.4-R0.1-SNAPSHOT")
 }
 
-val targetJavaVersion = 17
+val targetJavaVersion = 21
 
 java {
     val javaVersion = JavaVersion.toVersion(targetJavaVersion)
@@ -59,10 +62,6 @@ tasks {
     shadowJar {
         archiveClassifier.set("WonderlandPlugin-$version")
         destinationDirectory.set(file("/Users/toast/Desktop/testserver/plugins/"))
-
-
     }
-
 }
-
 

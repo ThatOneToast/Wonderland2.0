@@ -18,8 +18,6 @@ class ConfigManager {
     private var memoryConfigs: MutableSet<WLConfig> = mutableSetOf()
     private var indexedConfigs: MutableMap<String, String> = mutableMapOf()
 
-
-
     /**
      * Reloads a specific configuration by its name, updating the in-memory cache.
      *
@@ -49,7 +47,10 @@ class ConfigManager {
      * @throws IllegalStateException if the configuration cannot be found or loaded.
      * @throws NullPointerException if there is no config that exists.
      */
-    fun getConfig(name: String, skipMemCheck: Boolean = false): WLConfig {
+    fun getConfig(
+        name: String,
+        skipMemCheck: Boolean = false,
+    ): WLConfig {
         if (!skipMemCheck) {
             memoryConfigs.firstOrNull { config ->
                 (config is WLYamlConfig || config is WLBytesConfig && config.getName() == name)
@@ -63,10 +64,11 @@ class ConfigManager {
         }
 
         // Try to find and load the configuration file in the plugin's data folder
-        val configFile: File = WonderlandLibrary.getPlugin().dataFolder.walk()
-            .filter { it.isFile }
-            .find { it.nameWithoutExtension == name }
-            ?: throw ConfigurationNotFoundException("Configuration file '$name' does not exist.")
+        val configFile: File =
+            WonderlandLibrary.getPlugin().dataFolder.walk()
+                .filter { it.isFile }
+                .find { it.nameWithoutExtension == name }
+                ?: throw ConfigurationNotFoundException("Configuration file '$name' does not exist.")
 
         return loadConfigFromFile(configFile)
     }
@@ -91,7 +93,6 @@ class ConfigManager {
 
     class ConfigurationNotFoundException(message: String) : Exception(message)
 
-
     /**
      * Checks if a configuration file exists on disk.
      *
@@ -107,6 +108,18 @@ class ConfigManager {
     }
 
     /**
+     * Checks if a specific configuration is in the in-memory cache.
+     *
+     * @param name The name of the configuration to check.
+     * @return True if the configuration is in memory, false otherwise.
+     */
+    fun isConfigInMemory(name: String): Boolean {
+        return memoryConfigs.any { config ->
+            (config is WLYamlConfig || config is WLBytesConfig) && config.getName() == name
+        }
+    }
+
+    /**
      * Creates and registers a new configuration, saving it to disk.
      *
      * @param config The configuration to create.
@@ -114,7 +127,6 @@ class ConfigManager {
      */
     fun createConfig(config: WLConfig) {
         when (config) {
-
             is WLYamlConfig -> {
                 if (!doIExists(config)) {
                     File(config.fullPath).apply {
@@ -148,7 +160,6 @@ class ConfigManager {
             else -> {
                 WonderlandLibrary.getPlugin().logger.log(Level.SEVERE, "Unknown config type Config: $config")
             }
-
         }
     }
 
@@ -170,7 +181,6 @@ class ConfigManager {
         if (!memoryConfigsFile.exists()) {
             memoryConfigsFile.createNewFile()
             saveInternals()
-
         }
         if (!configsIndexFile.exists()) {
             configsIndexFile.createNewFile()
@@ -182,18 +192,20 @@ class ConfigManager {
      * Saves all configuration data to disk.
      */
     private fun saveInternals() {
-        val memConfig = WLBytesConfig(
-            "MemoryConfigs",
-            WonderlandLibrary.getPlugin().dataFolder.absolutePath,
-            false,
-            mapOf(Pair("Configs", memoryConfigs))
-        )
-        val indexConfig = WLBytesConfig(
-            "Index",
-            WonderlandLibrary.getPlugin().dataFolder.absolutePath,
-            true,
-            mapOf(Pair("Configs", indexedConfigs))
-        )
+        val memConfig =
+            WLBytesConfig(
+                "MemoryConfigs",
+                WonderlandLibrary.getPlugin().dataFolder.absolutePath,
+                false,
+                mapOf(Pair("Configs", memoryConfigs)),
+            )
+        val indexConfig =
+            WLBytesConfig(
+                "Index",
+                WonderlandLibrary.getPlugin().dataFolder.absolutePath,
+                true,
+                mapOf(Pair("Configs", indexedConfigs)),
+            )
         memoryConfigsFile.writeBytes(memConfig.toBytes())
         configsIndexFile.writeBytes(indexConfig.toBytes())
     }
@@ -219,25 +231,23 @@ class ConfigManager {
             }
 
             indexedConfigs = indexMap
-
         } catch (e: Exception) {
             // Log the error, handle the exception, or rethrow it as necessary
             println("Error initializing configurations: ${e.message}")
         }
     }
 
-
     companion object {
-        private val allDataFolderFileNames: List<String> = WonderlandLibrary.getPlugin().dataFolder.walk()
-            .filter { it.isFile }
-            .map { it.name }
-            .toList()
+        private val allDataFolderFileNames: List<String> =
+            WonderlandLibrary.getPlugin().dataFolder.walk()
+                .filter { it.isFile }
+                .map { it.name }
+                .toList()
 
         /**
          * Returns a list of file names
          */
         fun getAllConfigNames(): List<String> = allDataFolderFileNames
-
 
         /**
          * Generic method to deserialize configuration data from bytes into the specified type.

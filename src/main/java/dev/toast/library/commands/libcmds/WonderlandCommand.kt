@@ -139,6 +139,11 @@ class WonderlandCommand : WLPlayerCommand(
                 }
 
             }
+            else if (args.size >= 3 && args[2].lowercase() == "reload" ) {
+                val fileName = args[3].substringBefore('.')
+                WonderlandLibrary.getConfigManager().reloadConfig(fileName)
+                player.sendMessage(ChatStructure.GREEN + "$fileName - Reloaded!")
+            }
             true
         }
     }

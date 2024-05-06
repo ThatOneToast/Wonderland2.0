@@ -16,5 +16,6 @@ interface WLConfig : Serializable {
     fun getFullFileName(): String
     fun setName(string: String)
     fun getPathIncludingExtension(): String
+    fun save()
 
 }

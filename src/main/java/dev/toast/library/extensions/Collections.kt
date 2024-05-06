@@ -4,6 +4,10 @@ import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.minimessage.MiniMessage
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver
 import net.kyori.adventure.text.minimessage.tag.standard.StandardTags
+import net.minecraft.network.protocol.Packet
+import net.minecraft.server.network.ServerGamePacketListenerImpl
+import org.bukkit.craftbukkit.v1_20_R3.entity.CraftPlayer
+import org.bukkit.entity.Player
 import java.io.ByteArrayOutputStream
 import java.io.ObjectOutputStream
 import java.io.Serializable
@@ -13,18 +17,18 @@ import java.util.*
 
 fun String.toMiniMessageComponent(): Component {
     try {
-        val tags = TagResolver.builder()
-            .resolver(StandardTags.color())
-            .resolver(StandardTags.decorations())
-            .resolver(StandardTags.hoverEvent())
-            .resolver(StandardTags.clickEvent())
+        val tags =
+            TagResolver.builder()
+                .resolver(StandardTags.color())
+                .resolver(StandardTags.decorations())
+                .resolver(StandardTags.hoverEvent())
+                .resolver(StandardTags.clickEvent())
 
-        return MiniMessage.miniMessage().deserialize(this, tags.build() )
+        return MiniMessage.miniMessage().deserialize(this, tags.build())
     } catch (e: Exception) {
         throw IllegalArgumentException("Failed to parse MiniMessage: $this", e)
     }
 }
-
 
 fun <T : Serializable> Set<T>.toBytes(): ByteArray {
     val baos = ByteArrayOutputStream()
@@ -42,9 +46,16 @@ fun <K : Serializable, V : Serializable> Map<K, V>.toBytes(): ByteArray {
     return baos.toByteArray()
 }
 
+fun Player.sendPackets(packets: List<Packet<*>>) {
+    val entityPlayer = (this as CraftPlayer).handle
+    val connection: ServerGamePacketListenerImpl = entityPlayer.connection
+    packets.forEach { packet -> connection.send(packet) }
+}
 
-
-fun combineUUIDs(uuid1: UUID, uuid2: UUID): UUID {
+fun combineUUIDs(
+    uuid1: UUID,
+    uuid2: UUID,
+): UUID {
     val byteBuffer = ByteBuffer.allocate(32)
     byteBuffer.putLong(uuid1.mostSignificantBits)
     byteBuffer.putLong(uuid1.leastSignificantBits)

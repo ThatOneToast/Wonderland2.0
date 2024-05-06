@@ -30,7 +30,7 @@ abstract class WLPlayerCommand(
 
         val officialCommand: Command = object: Command(name) {
             override fun execute(sender: CommandSender, commandLabel: String, args: Array<String>): Boolean {
-                if(canExecute(sender, args)) {
+                if(canExecute(sender)) {
                     sender as Player
                     val uuid = combineUUIDs(commandUUID, sender.uniqueId)
 
@@ -53,7 +53,7 @@ abstract class WLPlayerCommand(
         commandMap.register(WonderlandLibrary.getPlugin().name, officialCommand)
     }
 
-    private fun canExecute(sender: CommandSender, args: Array<String>): Boolean {
+    private fun canExecute(sender: CommandSender): Boolean {
         if(sender !is Player) {
             sender.sendMessage("Only players can use this command.")
             return false

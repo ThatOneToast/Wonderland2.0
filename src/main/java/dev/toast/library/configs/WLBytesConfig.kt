@@ -2,6 +2,7 @@ package dev.toast.library.configs
 
 import dev.toast.library.WonderlandLibrary
 import java.io.ByteArrayOutputStream
+import java.io.File
 import java.io.ObjectOutputStream
 
 /**
@@ -57,6 +58,7 @@ class WLBytesConfig(
      */
     fun setProperty(name: String, value: Any) {
         properties[name] = value
+        WonderlandLibrary.getConfigManager().reloadConfig(this.name)
     }
 
     /**
@@ -128,6 +130,11 @@ class WLBytesConfig(
 
     override fun getPathIncludingExtension(): String {
         return fullPath
+    }
+
+    override fun save() {
+        val file = File(fullPath)
+        file.writeBytes(toBytes())
     }
 
 

@@ -2,6 +2,7 @@ package dev.toast.library.configs
 
 import dev.toast.library.WonderlandLibrary
 import org.yaml.snakeyaml.Yaml
+import java.io.File
 import java.io.StringReader
 import java.io.StringWriter
 
@@ -15,15 +16,16 @@ import java.io.StringWriter
  */
 open class WLYamlConfig(
     private val cname: String,
-    open val folder: String,
+    val folder: String,
     open val quickAccess: Boolean,
-    private val defaultProperties: Map<String, Any> = mapOf()
+    private val defaultProperties: Map<String, Any> = mapOf(),
 ) : WLConfig {
     private var properties: MutableMap<String, Any> = defaultProperties.toMutableMap()
     private var name = cname
 
     // Full path to the configuration file, combining the folder and file name.
-    val fullPath = "${WonderlandLibrary.getPlugin().dataFolder.absolutePath}/Configs/$name.yml"
+    val fullPath = "$folder/$name.yml"
+
     // Full name of the YAML file.
     private val fullFileName = "$name.yml"
 
@@ -54,8 +56,12 @@ open class WLYamlConfig(
      * @param name The key associated with the value to be set.
      * @param value The value to be stored in the configuration.
      */
-    fun setProperty(name: String, value: Any) {
+    fun setProperty(
+        name: String,
+        value: Any,
+    ) {
         properties[name] = value
+        WonderlandLibrary.getConfigManager().reloadConfig(this.name)
     }
 
     /**
@@ -90,12 +96,13 @@ open class WLYamlConfig(
     fun toYaml(): String {
         val yaml = Yaml()
         val writer = StringWriter()
-        val yamlMap = mapOf(
-            "name" to name,
-            "folder" to folder,
-            "quickAccess" to quickAccess,
-            "properties" to formatYamlValue(properties)
-        )
+        val yamlMap =
+            mapOf(
+                "name" to name,
+                "folder" to folder,
+                "quickAccess" to quickAccess,
+                "properties" to formatYamlValue(properties),
+            )
         yaml.dump(yamlMap, writer)
         return writer.toString()
     }
@@ -130,7 +137,7 @@ open class WLYamlConfig(
                 data["name"] as? String ?: throw IllegalArgumentException("Folder is missing name"),
                 data["folder"] as? String ?: throw IllegalArgumentException("Folder is missing"),
                 data["quickAccess"] as? Boolean ?: throw IllegalArgumentException("QuickAccess is missing"),
-                data["properties"] as? Map<String, Any> ?: throw IllegalArgumentException("Properties are missing")
+                data["properties"] as? Map<String, Any> ?: throw IllegalArgumentException("Properties are missing"),
             )
         }
     }
@@ -153,5 +160,10 @@ open class WLYamlConfig(
 
     override fun getPathIncludingExtension(): String {
         return fullPath
+    }
+
+    override fun save() {
+        val file = File(fullPath)
+        file.writeText(toYaml())
     }
 }

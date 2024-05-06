@@ -111,7 +111,6 @@ enum class ChatStructure(val colorTag: String) {
                     gradiant += ":"
                 }
             }
-            println(gradiant)
             return MiniMessage.miniMessage().deserialize("<gradient:$gradiant>$message<reset>")
         }
 
@@ -150,11 +149,6 @@ enum class ChatStructure(val colorTag: String) {
             StandardTags.color(), StandardTags.clickEvent(), StandardTags.hoverEvent(), StandardTags.decorations(),
         )
     }
-
-
-
-
-
 
     class PaginatedMessage(private val items: List<Component>, private val itemsPerPage: Int = 7) {
         private val totalPages: Int = (items.size + itemsPerPage - 1) / itemsPerPage

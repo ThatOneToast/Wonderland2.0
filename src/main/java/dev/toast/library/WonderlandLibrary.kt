@@ -4,9 +4,13 @@ import dev.toast.library.commands.libcmds.WonderlandCommand
 import dev.toast.library.configs.ConfigManager
 import dev.toast.library.configs.WLYamlConfig
 import dev.toast.library.extensions.HandleCustomEvents
+import dev.toast.library.rpx.combat.DamageSystem
+import dev.toast.library.rpx.combat.ManaSystem
 import dev.toast.library.utils.CooldownManager
+import org.bukkit.GameRule
 import org.bukkit.plugin.Plugin
 import java.io.File
+import java.util.logging.Level
 
 /**
  * Main library class for the WonderlandLibrary, handling the initialization and management
@@ -23,46 +27,64 @@ class WonderlandLibrary {
      */
     fun start(plugin: Plugin) {
         instance = plugin
-        // Ensure the plugin's data folder exists, creating if not.
         plugin.dataFolder.mkdirs()
-        // Create a directory specifically for configurations.
         File(plugin.dataFolder, "Configs").mkdirs()
-        // Initialize the configuration manager.
+
         configManager = ConfigManager()
 
         val props: MutableMap<String, Any> = mutableMapOf()
         props["DebugMode"] = false
+        props["RPGMode"] = false
 
-        val wlconfig = WLYamlConfig(
-            "WonderlandOptions",
-            plugin.dataFolder.absolutePath,
-            true,
-            props
-
-        )
-        configManager.createConfig(wlconfig)
+        val wlconfig =
+            WLYamlConfig(
+                "WonderlandOptions",
+                plugin.dataFolder.absolutePath,
+                true,
+                props,
+            )
+        try {
+            configManager.createConfig(wlconfig)
+        } catch (e: IllegalArgumentException) {
+            getPlugin().logger.log(Level.INFO, "Loading WonderlandOptions...")
+        }
         plugin.server.pluginManager.registerEvents(HandleCustomEvents(), plugin)
+
+        val wonderlandOptions = configManager.getConfig("WonderlandOptions") as WLYamlConfig
+        val rpgSystem = wonderlandOptions.getProperty("RPGMode") as Boolean
+
+        if (rpgSystem) {
+            damageSystem = DamageSystem()
+            getPlugin().server.worlds.forEach { world ->
+                world.setGameRule(GameRule.NATURAL_REGENERATION, false)
+            }
+            plugin.server.pluginManager.registerEvents(DamageSystem(), getPlugin())
+            plugin.server.pluginManager.registerEvents(ManaSystem, getPlugin())
+        }
+
         WonderlandCommand()
-
-
     }
 
     /**
      * Performs any necessary cleanup operations upon termination of the plugin.
      */
     fun terminate() {
-        // Implementation can include shutting down managers or saving data.
+        configManager.terminate()
     }
 
-
+    fun getConfigManager(): ConfigManager {
+        return configManager
+    }
 
     companion object {
         // Static instance of the plugin, used for global access within the package.
         @JvmStatic
         private lateinit var instance: Plugin
 
-        @JvmStatic
         private lateinit var configManager: ConfigManager
+
+        @JvmStatic
+        private lateinit var damageSystem: DamageSystem
 
         /**
          * Gets the plugin instance associated with this library.
@@ -84,9 +106,14 @@ class WonderlandLibrary {
          *
          * @return The active ConfigManager instance.
          */
+        fun getConfigManager(): ConfigManager = configManager
+
         @JvmStatic
-        fun getConfigManager(): ConfigManager {
-            return configManager
+        fun getDamageSystem(): DamageSystem = damageSystem
+
+        @JvmStatic
+        fun config(): WLYamlConfig {
+            return configManager.getConfig("WonderlandOptions") as WLYamlConfig
         }
     }
 }
