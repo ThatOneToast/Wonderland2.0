@@ -6,7 +6,9 @@ import dev.toast.library.packets.AnimationPackets
 import dev.toast.library.rpx.combat
 import dev.toast.library.utils.ChatStructure
 import org.bukkit.Bukkit
+import org.bukkit.Material
 import org.bukkit.attribute.Attribute
+import org.bukkit.entity.Arrow
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
@@ -150,82 +152,115 @@ class DamageSystem : Listener {
         event.player.health = maxHealth * 0.7
     }
 
+    private fun checkDelay(player: Player) {
+        val currentTime = System.currentTimeMillis()
+        if (currentTime - lastDamageTime.getOrDefault(player.uniqueId, 0L) < 250L) return
+        else lastDamageTime[player.uniqueId] = currentTime
+    }
+
+
     @EventHandler(priority = EventPriority.HIGHEST)
     private fun handleEntityDamage(event: EntityDamageByEntityEvent) {
-        // Check if the entity taking damage is a player
-        if (event.entity !is Player) return
-        val player = event.entity as Player
-
-        val currentTime = System.currentTimeMillis()
-        if (event.damager !is Player) return
-        val damager = event.damager as Player
-
         event.isCancelled = true
 
-        if (currentTime - lastDamageTime.getOrDefault(player.uniqueId, 0L) < 250L) {
-            return
-        } else {
-            lastDamageTime[player.uniqueId] = currentTime
+        fun getStrengthDamage(): Double? {
+            if (event.damager !is Player) return null
+            val damager = event.damager as Player
+
+            return damager.combat.stats.strength * damageIncreaseFromStrength
         }
 
-        var finalDamage = 0.0
+        fun getDexDamage(): Double? {
 
-        finalDamage += damager.combat.stats.strength * damageIncreaseFromStrength
+            val damager = event.damager
+            if (damager !is Arrow) return null
+            val shooter = damager.shooter
+            if (shooter !is Player) return null
 
-        finalDamage = getDamageValue(player, finalDamage)
+            val inventory = shooter.inventory
+            val mainHandItem = inventory.itemInMainHand
 
-        val currentHealth = playerHealth[player.uniqueId] ?: 0.0
-        val newHealth = max(0.0, min(currentHealth - finalDamage, globalMaxHealth))
+            val isUsingBow = mainHandItem.type == Material.BOW
+            val isUsingCrossbow = mainHandItem.type == Material.CROSSBOW
 
-        if (newHealth <= 0.0) {
-            player.health = 0.0
-        } else {
-            playerHealth[player.uniqueId] = newHealth
-        }
+            val dexPoints = shooter.combat.stats.dexterity
 
-        if (WonderlandLibrary.config().getProperty("DebugMode") == true) {
-            player.sendMessage(
-                ChatStructure.gradiantColor(
-                    "Your health is ${newHealth.toInt()}",
-                    arrayOf(ChatStructure.LIGHT_PURPLE, ChatStructure.AQUA),
-                ),
+            if (isUsingBow) {
+                val damageIncreaseFromDex: Double = 0.25 * dexPoints
+                return damageIncreaseFromDex
+            }
+
+            if (isUsingCrossbow) {
+                val damageIncreaseFromDex: Double = 0.25 * dexPoints
+                return damageIncreaseFromDex
+            }
+
+            /*
+                Weapon: ( : Complete
+                 - + Bow Damage
+                 - +1 CrossBow Damage
+                )
+                Armor: ( : WI
+                - Step a little higher +1%
+                - 3% Less fall damage
+                - +1 Fall Distance
             )
+                */
+            return null
+        }
+
+        fun updateHealth() {
+            if (event.entity !is Player) return
+            val player = event.entity as Player
+            val currentHealth = playerHealth[player.uniqueId] ?: 0.0
+
+            var finalDamage = 0.0
+            if (getStrengthDamage() != null) finalDamage += getStrengthDamage()!!
+            if (getDexDamage() != null) finalDamage += getDexDamage()!!
+
+            checkDelay(player)
+            val newHealth = max(0.0, min(currentHealth - finalDamage, globalMaxHealth))
+            if (newHealth <= 0.0) {
+                player.health = 0.0
+            } else {
+                playerHealth[player.uniqueId] = newHealth
+            }
+
+            if (WonderlandLibrary.config().getProperty("DebugMode") == true) {
+                player.sendMessage(
+                    ChatStructure.gradiantColor(
+                        "Your health is ${newHealth.toInt()}",
+                        arrayOf(ChatStructure.LIGHT_PURPLE, ChatStructure.AQUA),
+                    ),
+                )
+            }
+
+            AnimationPackets.HURT_ANIMATION.send(player, event.damager.location.yaw)
         }
 
 
-
-        AnimationPackets.HURT_ANIMATION.send(player, event.damager.location.yaw)
+        updateHealth()
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
     private fun handleGenericDamage(event: EntityDamageEvent) {
-        // Check if the entity taking damage is a player
         if (event.entity !is Player) return
         val player = event.entity as Player
         event.isCancelled = true
-        val currentTime = System.currentTimeMillis()
 
-        if (currentTime - lastDamageTime.getOrDefault(player.uniqueId, 0L) < 250L) {
-            return
-        } else {
-            lastDamageTime[player.uniqueId] = currentTime
-        }
+        checkDelay(player)
 
         val currentHealth = player.combat.stats.health
         val maxHealth = player.combat.stats.maxHealth
 
         val finalDamage = getDamageValue(player, event.damage)
 
-        // Calculate the new health
         val newHealth = max(0.0, min(currentHealth - finalDamage, maxHealth))
-
-        // Update or reset the player's health
         if (newHealth <= 0.0) {
             player.health = 0.0
         } else {
             playerHealth[player.uniqueId] = newHealth
         }
-
         if (WonderlandLibrary.config().getProperty("DebugMode") == true) {
             player.sendMessage(
                 ChatStructure.gradiantColor(
