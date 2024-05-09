@@ -33,7 +33,7 @@ object ManaSystem : Listener {
     }
 
     fun setMaxMana(player: Player, mana: Double) {
-        val playerCombat = player.combat.combatConfig
+        val playerCombat = player.combat.config
         playerCombat.setProperty("maxMana", mana)
         val currentManaRegen = playerMana[player.uniqueId]?.second ?: 0.5
         val currentMana = playerMana[player.uniqueId]?.third ?: 0.0
@@ -45,7 +45,7 @@ object ManaSystem : Listener {
     }
 
     fun setManaRegen(player: Player, manaRegen: Double) {
-        val playerCombat = player.combat.combatConfig
+        val playerCombat = player.combat.config
         playerCombat.setProperty("manaRegen", manaRegen)
         val currentMaxMana = playerMana[player.uniqueId]?.first ?: 100.0
         val currentMana = playerMana[player.uniqueId]?.third ?: 0.0

@@ -136,6 +136,8 @@ enum class ChatStructure(val colorTag: String) {
             audience.sendMessage(MiniMessage.miniMessage().deserialize(message))
         }
 
+
+
     }
 
     operator fun plus(other: String): Component {

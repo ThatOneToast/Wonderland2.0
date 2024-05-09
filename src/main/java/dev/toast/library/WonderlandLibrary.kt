@@ -1,11 +1,14 @@
 package dev.toast.library
 
+import dev.toast.library.commands.libcmds.VeinMineToggle
 import dev.toast.library.commands.libcmds.WonderlandCommand
 import dev.toast.library.configs.ConfigManager
 import dev.toast.library.configs.WLYamlConfig
 import dev.toast.library.extensions.HandleCustomEvents
+import dev.toast.library.rpx.VeinMiner
 import dev.toast.library.rpx.combat.DamageSystem
 import dev.toast.library.rpx.combat.ManaSystem
+import dev.toast.library.rpx.homes.HomeManager
 import dev.toast.library.utils.CooldownManager
 import org.bukkit.GameRule
 import org.bukkit.plugin.Plugin
@@ -35,6 +38,7 @@ class WonderlandLibrary {
         val props: MutableMap<String, Any> = mutableMapOf()
         props["DebugMode"] = false
         props["RPGMode"] = false
+        props["VeinMiner"] = false
 
         val wlconfig =
             WLYamlConfig(
@@ -52,15 +56,27 @@ class WonderlandLibrary {
 
         val wonderlandOptions = configManager.getConfig("WonderlandOptions") as WLYamlConfig
         val rpgSystem = wonderlandOptions.getProperty("RPGMode") as Boolean
+        var veinMinerCheck = wonderlandOptions.getProperty("VeinMiner") as Boolean
 
+        homeManager = HomeManager()
+        plugin.server.pluginManager.registerEvents(homeManager, getPlugin())
         if (rpgSystem) {
             damageSystem = DamageSystem()
+
             getPlugin().server.worlds.forEach { world ->
                 world.setGameRule(GameRule.NATURAL_REGENERATION, false)
             }
             plugin.server.pluginManager.registerEvents(DamageSystem(), getPlugin())
             plugin.server.pluginManager.registerEvents(ManaSystem, getPlugin())
         }
+
+        if (veinMinerCheck) {
+            val innVeinminer = VeinMiner()
+            veinMiner = innVeinminer
+            plugin.server.pluginManager.registerEvents(veinMiner, getPlugin())
+            VeinMineToggle()
+        }
+
 
         WonderlandCommand()
     }
@@ -70,6 +86,11 @@ class WonderlandLibrary {
      */
     fun terminate() {
         configManager.terminate()
+        val wonderlandOptions = configManager.getConfig("WonderlandOptions") as WLYamlConfig
+
+        if ((wonderlandOptions.getProperty("RPGMode") as Boolean)) {
+            homeManager.saveHomes()
+        }
     }
 
     fun getConfigManager(): ConfigManager {
@@ -85,6 +106,12 @@ class WonderlandLibrary {
 
         @JvmStatic
         private lateinit var damageSystem: DamageSystem
+
+        @JvmStatic
+        private lateinit var veinMiner: VeinMiner
+
+        @JvmStatic
+        private lateinit var homeManager: HomeManager
 
         /**
          * Gets the plugin instance associated with this library.
@@ -115,5 +142,21 @@ class WonderlandLibrary {
         fun config(): WLYamlConfig {
             return configManager.getConfig("WonderlandOptions") as WLYamlConfig
         }
+
+        @JvmStatic
+        fun getVeinMiner(): VeinMiner {
+            if (::veinMiner.isInitialized) {
+                return veinMiner
+            } else  throw IllegalStateException("VeinMiner not inititieideiidieid")
+        }
+
+        @JvmStatic
+        fun getHomeManager(): HomeManager {
+            if (::homeManager.isInitialized) {
+                return homeManager
+            } else throw IllegalStateException("Enable RPG to use this feature.")
+        }
+
+
     }
 }

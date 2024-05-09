@@ -22,13 +22,39 @@ class PlayerCombat(private val player: Player) {
         var health: Double
             get() = WonderlandLibrary.getDamageSystem().getPlayerHealth(player)
             set(value) = WonderlandLibrary.getDamageSystem().setPlayerHealth(player, value)
+
         var maxHealth: Double
-            get() = combatConfig.getProperty("maxHealth") as? Double ?: 40.0
-            set(value) = combatConfig.setProperty("maxHealth", value)
+            get() = config.getProperty("maxHealth") as? Double ?: 40.0
+            set(value) = config.setProperty("maxHealth", value)
+
+        var mana: Double
+            get() = ManaSystem.getMana(player)
+            set(value) = ManaSystem.setMana(player, value)
+
+        var maxMana: Double
+            get() = config.getProperty("maxMana") as? Double ?: 100.0
+            set(value) = config.setProperty("maxMana", value)
+
+        var manaRegen: Double
+            get() = config.getProperty("manaRegen") as? Double ?: 1.5
+            set(value) = config.setProperty("manaRegen", value)
+
+        var shield: Double
+            get() = WonderlandLibrary.getDamageSystem().getPlayerShield(player)
+            set(value) = WonderlandLibrary.getDamageSystem().setPlayerShield(player, value)
+
+        var maxShield: Double
+            get() = config.getProperty("maxShield") as? Double ?: 0.0
+            set(value) = config.setProperty("maxShield", value)
+
+        var shieldRegen: Double
+            get() = config.getProperty("shieldRegen") as? Double ?: 0.0
+            set(value) = config.setProperty("shieldRegen", value)
+
 
         var armor: Double
-            get() = combatConfig.getProperty("armor") as? Double ?: 0.0
-            set(value) = combatConfig.setProperty("armor", value)
+            get() = config.getProperty("armor") as? Double ?: 0.0
+            set(value) = config.setProperty("armor", value)
 
         var healthRegen: Double
             get() = player.persistentDataContainer.getOrDefault(wonderlandRegen, PersistentDataType.DOUBLE, 2.0)
@@ -50,17 +76,10 @@ class PlayerCombat(private val player: Player) {
             get() = player.persistentDataContainer.getOrDefault(wonderlandWisdom, PersistentDataType.INTEGER, 0)
             set(value) = player.persistentDataContainer.set(wonderlandWisdom, PersistentDataType.INTEGER, value)
 
-        var maxMana: Double
-            get() = combatConfig.getProperty("maxMana") as? Double ?: 100.0
-            set(value) = combatConfig.setProperty("maxMana", value)
-
-        var manaRegen: Double
-            get() = combatConfig.getProperty("manaRegen") as? Double ?: 1.5
-            set(value) = combatConfig.setProperty("manaRegen", value)
     }
 
     val stats = Stats()
-    val race = combatConfig.getProperty("race") as? String ?: "Human-Defaulted"
+    val race = config.getProperty("race") as? String ?: "Human-Defaulted"
 
     /**
      * Spends the allotted amount of mana.
@@ -106,7 +125,7 @@ class PlayerCombat(private val player: Player) {
         ManaSystem.setMaxMana(player, amount)
     }
 
-    val combatConfig: WLYamlConfig
+    val config: WLYamlConfig
         get() = WonderlandLibrary.getConfigManager().getConfig("Combat-${player.uniqueId}") as WLYamlConfig
 }
 
@@ -117,7 +136,7 @@ val Player.combat: PlayerCombat
  * Internal save. This saves all relative data to players for Wonderland.
  */
 fun Player.save() {
-    combat.combatConfig.save()
+    combat.config.save()
 }
 
 fun getPlayerStrength(player: Player): Int {

@@ -23,7 +23,7 @@ class WonderlandCommand : WLPlayerCommand(
     3
 ) {
     override fun executeCommand(sender: Player, args: Array<String>): Boolean {
-        TODO("Not yet implemented")
+        return true
     }
 
     fun constructHelpMenu(): ChatStructure.PaginatedMessage {
